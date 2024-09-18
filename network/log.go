@@ -1,0 +1,37 @@
+package network
+
+import (
+    "fmt"
+    "github.com/keccak254/pbft-implementation/consensus"
+)
+
+func LogMsg(msg interface{}) {
+    switch msg.(type) {
+
+    case *consensus.RequestMsg:
+        reqMsg := msg.(*consensus.RequestMsg)
+        fmt.Printf("[REQUEST] ClientID: %s, Timestamp: %d, Operation: %s\n",
+            reqMsg.ClientID, reqMsg.Timestamp, reqMsg.Operation)
+
+    case *consensus.PrePrepareMsg:
+        prePrepareMsg := msg.(*consensus.PrePrepareMsg)
+        fmt.Printf("[PREPREPARE] ViewID: %d, SequenceID: %d, Digest: %s\n",
+            prePrepareMsg.ViewID, prePrepareMsg.SequenceID, prePrepareMsg.Digest)
+
+    case *consensus.VoteMsg:
+        voteMsg := msg.(*consensus.VoteMsg)
+        if voteMsg.MsgType == consensus.PrepareMsg {
+            fmt.Printf("[PREPARE] NodeID: %s\n", voteMsg.NodeID)
+        } else if voteMsg.MsgType == consensus.CommitMsg {
+            fmt.Printf("[COMMIT] NodeID: %s\n", voteMsg.NodeID)
+        }
+    }
+}
+
+func LogStage(stage string, isDone bool) {
+    if isDone {
+        fmt.Printf("[STAGE-DONE] %s\n", stage)
+    } else {
+        fmt.Printf("[STAGE-BEGIN] %s\n", stage)
+    }
+}
