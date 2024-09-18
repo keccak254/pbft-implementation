@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	consensus "github.com/keccak254/pbft-implementation.git/consensus/pbft_msg_types"
+	"github.com/keccak254/pbft-implementation.git/consensus"
+	"github.com/keccak254/pbft-implementation/consensus/pbft_msg_types"
 )
 
 type State struct {
@@ -46,7 +47,7 @@ func CreateState(viewID int64, lastSequenceID int64) *State {
     }
 }
 
-func (state *State) StartConsensus(request *consensus.RequestMsg)(*consensus.PrePrepareMsg, error){
+func (state *State) StartConsensus(request *pbft_msg_types.RequestMsg)(*pbft_msg_types.PrePrepareMsg, error){
 	sequenceID := time.Now().UnixNano()
 
 	if state.LastSequenceID != -1 {
@@ -63,7 +64,7 @@ func (state *State) StartConsensus(request *consensus.RequestMsg)(*consensus.Pre
 			return nil, err
 	}
 
-	state.CurrentStage = consensus.PrePrepared
+	state.CurrentStage = PrePrepared
 
 	return &consensus.PrePrepareMsg{
 		ViewID: state.ViewID,
@@ -91,3 +92,27 @@ func (state *State) PrePrepare(prePrepareMsg *PrePrepareMsg)(*VoteMsg, error) {
 			MsgType:    PrepareMsg,
 		}, nil
 }
+
+func (state *State) Prepare(prepareMsg *pbft_msg_types.VoteMsg)(*pbft_msg_types.VoteMsg, error){
+
+		if !state.verifyMsg(prepareMsg.ViewID, prepareMsg.SequenceID, prepareMsg.Digest) {
+			return nil, errors.New("prepare message is corrupted")
+		}
+
+		state.MsgLogs.PrepareMsgs[prepareMsg.NodeID] = prepareMsg
+
+		if state.prepared() {
+
+				state.CurrentStage = Prepared
+
+				return &pbft_msg_types.VoteMsg{
+					ViewID:     state.ViewID,
+					SequenceID: prepareMsg.SequenceID,
+					Digest:     prepareMsg.Digest,
+					MsgType:    pbft_msg_types.CommitMsg,
+				},nil
+				}
+				return nil, nil
+	}
+
+
