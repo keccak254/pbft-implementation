@@ -115,4 +115,85 @@ func (state *State) Prepare(prepareMsg *pbft_msg_types.VoteMsg)(*pbft_msg_types.
 				return nil, nil
 	}
 
+func(state *State) Commit (commitMsg *pbft_msg_types.VoteMsg)(*pbft_msg_types.ReplyMsg, *pbft_msg_types.RequestMsg, error){
+
+	if !state.verifyMsg(commitMsg.viewID, commitMsg.SequenceID, commitMsg.Digest) {
+		return nil, nil, errors.New("commit message is corrupted")
+	}
+
+	state.MsgLogs.CommitMsgs[commitMsg.NodeID] = commitMsg
+
+	if state.committed(){
+
+		result := "Executed"
+		state.CurrentStage = Committed
+		replyMsg := &pbft_msg_types.ReplyMsg{
+				ViewID: state.ViewID,
+				Timestamp: state.MsgLogs.ReqMsg.Timestamp,
+				ClientID: state.MsgLogs.ReqMsg.ClientID,
+				Result: result,
+		}
+		return replyMsg, state.MsgLogs.ReqMsg, nil
+	}
+
+	return nil, nil, nil
+}
+
+func (state *State) verifyMsg(viewID int64, sequenceID int64, digestGot string) bool {
+
+		if state.ViewID != viewID{
+			return false
+		}
+
+		if state.LastSequenceID != -1{
+			if state.LastSequenceID >= sequenceID{
+				return false
+			}
+		}
+
+		digest, err := digest(state.MsgLogs.ReqMsg)
+		if err != nil {
+			fmt.Println(err)
+			return false
+		}
+
+		if digestGot != digest{
+			return false
+		}
+
+		return true
+
+	}
+
+	func(state *State) prepared() bool {
+
+		if state.MsgLogs.ReqMsg == nil{
+				return false
+		}
+
+		if len(state.MsgLogs.PrepareMsgs) <2*f {
+				return false
+		}
+		return true
+	}
+
+func(state *State) committed() bool {
+	if !state.prepared(){
+			return false
+	}
+
+	if len(state.MsgLogs.CommitMsgs) < 2*f{
+		return false
+	}
+	return true
+}
+
+func digest(object interface{}) (string, error){
+		msg, err := json.Marshal(object)
+
+		if err != nil {
+				return "", err
+		}
+		return Hash(msg), nil
+}
 
