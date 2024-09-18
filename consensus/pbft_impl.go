@@ -5,9 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/keccak254/pbft-implementation.git/consensus"
-	"github.com/keccak254/pbft-implementation/consensus/pbft_msg_types"
 )
 
 type State struct {
@@ -47,7 +44,7 @@ func CreateState(viewID int64, lastSequenceID int64) *State {
     }
 }
 
-func (state *State) StartConsensus(request *pbft_msg_types.RequestMsg)(*pbft_msg_types.PrePrepareMsg, error){
+func (state *State) StartConsensus(request *RequestMsg)(*PrePrepareMsg, error){
 	sequenceID := time.Now().UnixNano()
 
 	if state.LastSequenceID != -1 {
@@ -66,7 +63,7 @@ func (state *State) StartConsensus(request *pbft_msg_types.RequestMsg)(*pbft_msg
 
 	state.CurrentStage = PrePrepared
 
-	return &consensus.PrePrepareMsg{
+	return &PrePrepareMsg{
 		ViewID: state.ViewID,
 		SequenceID: sequenceID,
 		Digest: digest,
@@ -93,7 +90,7 @@ func (state *State) PrePrepare(prePrepareMsg *PrePrepareMsg)(*VoteMsg, error) {
 		}, nil
 }
 
-func (state *State) Prepare(prepareMsg *pbft_msg_types.VoteMsg)(*pbft_msg_types.VoteMsg, error){
+func (state *State) Prepare(prepareMsg *VoteMsg)(*VoteMsg, error){
 
 		if !state.verifyMsg(prepareMsg.ViewID, prepareMsg.SequenceID, prepareMsg.Digest) {
 			return nil, errors.New("prepare message is corrupted")
@@ -105,19 +102,19 @@ func (state *State) Prepare(prepareMsg *pbft_msg_types.VoteMsg)(*pbft_msg_types.
 
 				state.CurrentStage = Prepared
 
-				return &pbft_msg_types.VoteMsg{
+				return &VoteMsg{
 					ViewID:     state.ViewID,
 					SequenceID: prepareMsg.SequenceID,
 					Digest:     prepareMsg.Digest,
-					MsgType:    pbft_msg_types.CommitMsg,
+					MsgType:    CommitMsg,
 				},nil
 				}
 				return nil, nil
 	}
 
-func(state *State) Commit (commitMsg *pbft_msg_types.VoteMsg)(*pbft_msg_types.ReplyMsg, *pbft_msg_types.RequestMsg, error){
+func(state *State) Commit (commitMsg *VoteMsg)(*ReplyMsg, *RequestMsg, error){
 
-	if !state.verifyMsg(commitMsg.viewID, commitMsg.SequenceID, commitMsg.Digest) {
+	if !state.verifyMsg(commitMsg.ViewID, commitMsg.SequenceID, commitMsg.Digest) {
 		return nil, nil, errors.New("commit message is corrupted")
 	}
 
@@ -127,7 +124,7 @@ func(state *State) Commit (commitMsg *pbft_msg_types.VoteMsg)(*pbft_msg_types.Re
 
 		result := "Executed"
 		state.CurrentStage = Committed
-		replyMsg := &pbft_msg_types.ReplyMsg{
+		replyMsg := &ReplyMsg{
 				ViewID: state.ViewID,
 				Timestamp: state.MsgLogs.ReqMsg.Timestamp,
 				ClientID: state.MsgLogs.ReqMsg.ClientID,
